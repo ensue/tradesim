@@ -48,6 +48,27 @@ export const useChartStore = create<ChartState>((set, get) => ({
           labelVisible: true,
         },
       },
+      rightPriceScale: {
+        borderVisible: false,
+      },
+      timeScale: {
+        rightOffset: 6,
+        barSpacing: 40,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        borderVisible: false,
+        visible: true,
+      },
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: false,
+      }
     })
     
     const candlestickSeries = chart.addCandlestickSeries({
@@ -76,9 +97,22 @@ export const useChartStore = create<ChartState>((set, get) => ({
   },
 
   loadData: (data: CandlestickData[]) => {
-    const { candlestickSeries } = get()
-    if (candlestickSeries) {
+    const { candlestickSeries, chart } = get()
+    if (candlestickSeries && chart) {
       candlestickSeries.setData(data)
+
+      // Ustaw widoczny zakres po załadowaniu danych
+      setTimeout(() => {
+        const timeScale = chart.timeScale()
+        const points = data.length
+        const visiblePoints = Math.floor(points * 0.75)  // Pokaż 75% punktów
+        
+        // Przesuń wykres tak, aby ostatnia świeczka była widoczna
+        timeScale.setVisibleLogicalRange({
+          from: points - visiblePoints,
+          to: points - 1
+        })
+      }, 100)
     }
   },
 

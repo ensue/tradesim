@@ -58,29 +58,48 @@ export function Chart() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex gap-2 p-2">
-        <button 
-          className={`px-4 py-2 rounded ${activeMarker === 'ep' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveMarker(current => current === 'ep' ? null : 'ep')}
-        >
-          EP
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${activeMarker === 'sl' ? 'bg-red-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveMarker(current => current === 'sl' ? null : 'sl')}
-        >
-          SL
-        </button>
-        <button 
-          className={`px-4 py-2 rounded ${activeMarker === 'tp' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setActiveMarker(current => current === 'tp' ? null : 'tp')}
-        >
-          TP
-        </button>
-        {currentPrice && (
-          <span className="px-4 py-2 bg-gray-100 rounded">
-            Price: {currentPrice.toFixed(2)}
-          </span>
+      <div className="flex flex-col gap-2 p-2 border-b border-gray-200">
+        <div className="flex gap-2">
+          <button 
+            className={`px-4 py-2 rounded transition-colors ${
+              activeMarker === 'ep' 
+                ? 'bg-blue-500 text-white ring-2 ring-blue-300' 
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            onClick={() => setActiveMarker(current => current === 'ep' ? null : 'ep')}
+          >
+            EP
+          </button>
+          <button 
+            className={`px-4 py-2 rounded transition-colors ${
+              activeMarker === 'sl' 
+                ? 'bg-red-500 text-white ring-2 ring-red-300' 
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            onClick={() => setActiveMarker(current => current === 'sl' ? null : 'sl')}
+          >
+            SL
+          </button>
+          <button 
+            className={`px-4 py-2 rounded transition-colors ${
+              activeMarker === 'tp' 
+                ? 'bg-green-500 text-white ring-2 ring-green-300' 
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            onClick={() => setActiveMarker(current => current === 'tp' ? null : 'tp')}
+          >
+            TP
+          </button>
+          {currentPrice && (
+            <span className="px-4 py-2 bg-gray-100 rounded ml-auto">
+              Price: {currentPrice.toFixed(2)}
+            </span>
+          )}
+        </div>
+        {activeMarker && (
+          <div className="text-sm text-gray-600">
+            Kliknij na wykresie, aby ustawić {activeMarker.toUpperCase()} linię
+          </div>
         )}
       </div>
       <div ref={containerRef} className="flex-1" />
