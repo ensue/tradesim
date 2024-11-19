@@ -7,7 +7,7 @@ interface ChartState {
   entryLine: IPriceLine | null
   stopLossLine: IPriceLine | null
   takeProfitLine: IPriceLine | null
-  initChart: (container: HTMLElement) => void
+  initChart: (container: HTMLElement) => IChartApi
   destroyChart: () => void
   loadData: (data: CandlestickData[]) => void
   setEntryPrice: (price: number) => void
@@ -36,6 +36,17 @@ export const useChartStore = create<ChartState>((set, get) => ({
       },
       crosshair: {
         mode: 1,
+        vertLine: {
+          width: 1,
+          color: '#2196F3',
+          style: 1,
+        },
+        horzLine: {
+          width: 1,
+          color: '#2196F3',
+          style: 1,
+          labelVisible: true,
+        },
       },
     })
     
