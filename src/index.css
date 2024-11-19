@@ -15,26 +15,6 @@
 
 @layer base {
   body {
-    @apply m-0 flex min-w-[320px] min-h-screen bg-[#242424] text-[rgba(255,255,255,0.87)];
-  }
-
-  a {
-    @apply font-medium text-[#646cff] no-underline hover:text-[#535bf2];
-  }
-
-  button {
-    @apply rounded-lg border border-transparent px-[1.2em] py-[0.6em] text-base font-medium 
-           bg-[#1a1a1a] cursor-pointer transition-[border-color] duration-300 
-           hover:border-[#646cff] focus:outline focus:outline-4 focus:-outline-offset-4;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    @apply text-[#213547] bg-white;
-  }
-
-  button {
-    @apply bg-[#f9f9f9];
+    @apply m-0 min-h-screen bg-white text-black;
   }
 }
