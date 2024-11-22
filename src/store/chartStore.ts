@@ -52,14 +52,28 @@ export const useChartStore = create<ChartState>((set, get) => ({
     chart.subscribeCrosshairMove((param) => {
       const { isDrawing, startPoint } = get()
       
-      if (isDrawing && startPoint && param.point) {
+      if (overlayCanvas instanceof HTMLCanvasElement) {
         const ctx = overlayCanvas.getContext('2d')
-        if (ctx) {
+        if (ctx && isDrawing && startPoint && param.point) {
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-          ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
+          
+          // Obliczamy wymiary
           const width = param.point.x - startPoint.x
           const height = param.point.y - startPoint.y
+          
+          // Rysowanie pierwszego prostokąta (różowy - SL do EP)
+          ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
           ctx.fillRect(startPoint.x, startPoint.y, width, height)
+          
+          // Rysowanie drugiego prostokąta (jasnozielony - EP do TP)
+          // Zaczynamy od punktu EP i rozciągamy w tym samym kierunku
+          ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
+          ctx.fillRect(
+            param.point.x - width,
+            param.point.y, 
+            width * RRR, // ta sama szerokość
+            height // wysokość w przeciwnym kierunku * RRR
+          )
         }
       }
     })
@@ -89,11 +103,18 @@ export const useChartStore = create<ChartState>((set, get) => ({
     const { isDrawing } = get()
     
     if (!isDrawing) {
-      console.log('Starting point:', { x, y })
-      set({ isDrawing: true, startPoint: { x, y } })
+      console.log('SL point:', { x, y })
+      set({ isDrawing: true, startPoint: { x, y }, endPoint: null })
     } else {
-      console.log('End point:', { x, y })
-      set({ isDrawing: false, startPoint: null })
+      console.log('EP point:', { x, y })
+      set({ 
+        isDrawing: false, 
+        endPoint: { x, y },
+        rectangleCoords: {
+          start: get().startPoint!,
+          end: { x, y }
+        }
+      })
     }
   },
 }))
