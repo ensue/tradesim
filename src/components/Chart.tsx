@@ -1,22 +1,21 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useChartStore } from '../store/chartStore'
 import { sampleData } from '../data/sampleData'
-import { IChartApi, MouseEventParams, CandlestickData } from 'lightweight-charts'
+import { IChartApi } from 'lightweight-charts'
 
 export function Chart() {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const [currentPrice, setCurrentPrice] = useState<number | null>(null)
-  const { initChart, destroyChart, loadData } = useChartStore()
+  const { initChart, destroyChart, loadData, handleChartClick } = useChartStore()
 
-  const handleCrosshairMove = useCallback((param: MouseEventParams) => {
-    if (param.seriesData.size > 0) {
-      const candleData = Array.from(param.seriesData.values())[0] as CandlestickData
-      if (candleData) {
-        setCurrentPrice(candleData.close)
-      }
+  const handleClick = useCallback((event: MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (rect) {
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+      handleChartClick(x, y)
     }
-  }, [])
+  }, [handleChartClick])
 
   useEffect(() => {
     const chartContainer = containerRef.current
@@ -24,28 +23,19 @@ export function Chart() {
       const chart = initChart(chartContainer)
       chartRef.current = chart
       loadData(sampleData)
-
-      chart.subscribeCrosshairMove(handleCrosshairMove)
+      
+      chartContainer.addEventListener('click', handleClick)
       
       return () => {
-        chart.unsubscribeCrosshairMove(handleCrosshairMove)
+        chartContainer.removeEventListener('click', handleClick)
         destroyChart()
       }
     }
-  }, [initChart, destroyChart, loadData, handleCrosshairMove])
+  }, [initChart, destroyChart, loadData, handleClick])
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-col gap-2 p-2 border-b border-gray-200">
-        <div className="flex gap-2">
-          {currentPrice && (
-            <span className="px-4 py-2 bg-gray-100 rounded ml-auto">
-              Price: {currentPrice.toFixed(2)}
-            </span>
-          )}
-        </div>
-      </div>
-      <div ref={containerRef} className="flex-1" />
+      <div ref={containerRef} className="flex-1 chart-container" />
     </div>
   )
 }
