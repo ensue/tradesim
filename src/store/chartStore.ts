@@ -57,22 +57,23 @@ export const useChartStore = create<ChartState>((set, get) => ({
         if (ctx && isDrawing && startPoint && param.point) {
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
           
-          // Obliczamy wymiary
-          const width = param.point.x - startPoint.x
-          const height = param.point.y - startPoint.y
+          const x = param.point.x
+          const y = overlayCanvas.height - param.point.y
+          
+          const width = x - startPoint.x
+          const height = startPoint.y - y
           
           // Rysowanie pierwszego prostokąta (różowy - SL do EP)
           ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
-          ctx.fillRect(startPoint.x, startPoint.y, width, height)
+          ctx.fillRect(startPoint.x, overlayCanvas.height - startPoint.y, width, height)
           
           // Rysowanie drugiego prostokąta (jasnozielony - EP do TP)
-          // Zaczynamy od punktu EP i rozciągamy w tym samym kierunku
           ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
           ctx.fillRect(
-            param.point.x - width,
-            param.point.y, 
-            width * RRR, // ta sama szerokość
-            height // wysokość w przeciwnym kierunku * RRR
+            x - width,
+            overlayCanvas.height - y,
+            width * RRR,
+            height
           )
         }
       }
@@ -107,11 +108,19 @@ export const useChartStore = create<ChartState>((set, get) => ({
       set({ isDrawing: true, startPoint: { x, y }, endPoint: null })
     } else {
       console.log('EP point:', { x, y })
+      
+      // Obliczanie punktu TP
+      const startPoint = get().startPoint!
+      const tpX = x
+      const width = x - startPoint.x
+      const tpY = y + (width * RRR)
+      console.log('TP point:', { x: tpX, y: tpY })
+      
       set({ 
         isDrawing: false, 
         endPoint: { x, y },
         rectangleCoords: {
-          start: get().startPoint!,
+          start: startPoint,
           end: { x, y }
         }
       })

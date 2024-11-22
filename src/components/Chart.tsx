@@ -12,7 +12,7 @@ export function Chart() {
     const rect = containerRef.current?.getBoundingClientRect()
     if (rect) {
       const x = event.clientX - rect.left
-      const y = event.clientY - rect.top
+      const y = rect.height - (event.clientY - rect.top)
       handleChartClick(x, y)
     }
   }, [handleChartClick])
