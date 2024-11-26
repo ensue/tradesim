@@ -29,6 +29,15 @@ export const useChartStore = create<ChartState>((set, get) => ({
     const chart = createChart(container, {
       width: container.clientWidth,
       height: container.clientHeight,
+      crosshair: {
+        mode: 0,
+        vertLine: {
+          labelVisible: false,
+        },
+        horzLine: {
+          labelVisible: false,
+        },
+      },
     })
     
     const candlestickSeries = chart.addCandlestickSeries({
@@ -58,22 +67,22 @@ export const useChartStore = create<ChartState>((set, get) => ({
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
           
           const x = param.point.x
-          const y = overlayCanvas.height - param.point.y
+          const y = param.point.y
           
           const width = x - startPoint.x
-          const height = startPoint.y - y
+          const height = y - startPoint.y
           
           // Rysowanie pierwszego prostokąta (różowy - SL do EP)
           ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
-          ctx.fillRect(startPoint.x, overlayCanvas.height - startPoint.y, width, height)
+          ctx.fillRect(startPoint.x, startPoint.y, width, height)
           
           // Rysowanie drugiego prostokąta (jasnozielony - EP do TP)
           ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
           ctx.fillRect(
             x - width,
-            overlayCanvas.height - y,
-            width * RRR,
-            height
+            y,
+            width,
+            height * RRR
           )
         }
       }
@@ -101,20 +110,30 @@ export const useChartStore = create<ChartState>((set, get) => ({
   },
 
   handleChartClick: (x: number, y: number) => {
-    const { isDrawing } = get()
+    const { isDrawing, candlestickSeries, chart } = get()
+    
+    if (!chart || !candlestickSeries) return
+    
+    const container = chart.chartElement()
+    const chartHeight = container?.clientHeight ?? 0
+    const invertedY = chartHeight - y
     
     if (!isDrawing) {
-      console.log('SL point:', { x, y })
+      const price = candlestickSeries.coordinateToPrice(invertedY)
+      console.log('SL point: ', { x, y: invertedY, price })
       set({ isDrawing: true, startPoint: { x, y }, endPoint: null })
     } else {
-      console.log('EP point:', { x, y })
-      
-      // Obliczanie punktu TP
       const startPoint = get().startPoint!
-      const tpX = x
+      const invertedStartY = chartHeight - startPoint.y
+      const price = candlestickSeries.coordinateToPrice(invertedY)
+      console.log('EP point: ', { x, y: invertedY, price })
+      
       const width = x - startPoint.x
-      const tpY = y + (width * RRR)
-      console.log('TP point:', { x: tpX, y: tpY })
+      const height = y - startPoint.y
+      const tpY = y + (height * RRR)
+      const invertedTpY = chartHeight - tpY
+      const tpPrice = candlestickSeries.coordinateToPrice(invertedTpY)
+      console.log('TP point: ', { x: x, y: invertedTpY, price: tpPrice })
       
       set({ 
         isDrawing: false, 
