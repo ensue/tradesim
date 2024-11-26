@@ -73,37 +73,34 @@ export const useChartStore = create<ChartState>((set, get) => ({
         if (ctx && isDrawing && startPoint && param.point) {
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
           
-          const mkPrice = candlestickSeries.coordinateToPrice(param.point.y)
-          if (!mkPrice) return
+          const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
+          if (!currentPrice) return
 
           const slPrice = get().slPrice!
-          const slDistance = Math.abs(mkPrice - slPrice)
-          const maxTpDistance = slDistance * RRR
-          
-          // Ograniczamy TP do maksymalnej dozwolonej odległości
-          const tpPrice = mkPrice + Math.min(mkPrice - slPrice, maxTpDistance)
+          const tpPrice = currentPrice
           const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
 
-          // Konwertujemy OBLICZONE ceny na koordynaty Y
+          // Konwertujemy ceny na koordynaty Y
           const slY = candlestickSeries.priceToCoordinate(slPrice)!
           const epY = candlestickSeries.priceToCoordinate(epPrice)!
           const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
 
-          // Rysujemy prostokąty używając obliczonych koordynatów Y
+          // Rysujemy prostokąt SL -> EP (czerwony)
           ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
           ctx.fillRect(
             startPoint.x,
-            Math.min(slY, epY),  // używamy Math.min/max aby obsłużyć oba kierunki ruchu
+            slY,
             param.point.x - startPoint.x,
-            Math.abs(epY - slY)
+            epY - slY
           )
 
+          // Rysujemy prostokąt EP -> TP (zielony)
           ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
           ctx.fillRect(
             startPoint.x,
-            Math.min(epY, tpY),
+            epY,
             param.point.x - startPoint.x,
-            Math.abs(tpY - epY)
+            tpY - epY
           )
 
           set({ tpPrice, epPrice })
