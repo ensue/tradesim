@@ -18,6 +18,7 @@ interface ChartState {
   slPrice: number | null
   epPrice: number | null
   tpPrice: number | null
+  drawRectangles: (ctx: CanvasRenderingContext2D, startX: number, endX: number) => void
 }
 
 export const useChartStore = create<ChartState>((set, get) => ({
@@ -65,37 +66,47 @@ export const useChartStore = create<ChartState>((set, get) => ({
     container.appendChild(overlayCanvas)
 
     chart.subscribeCrosshairMove((param) => {
-      const { isDrawing, startPoint, slPrice, candlestickSeries } = get()
+      const { isDrawing, startPoint, candlestickSeries } = get()
       
       if (overlayCanvas instanceof HTMLCanvasElement && candlestickSeries) {
         const ctx = overlayCanvas.getContext('2d')
-        if (ctx && isDrawing && startPoint && param.point && slPrice) {
+        if (ctx && isDrawing && startPoint && param.point) {
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
           
-          const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
-          if (!currentPrice) return
+          const mkPrice = candlestickSeries.coordinateToPrice(param.point.y)
+          if (!mkPrice) return
+
+          const slPrice = get().slPrice!
+          const slDistance = Math.abs(mkPrice - slPrice)
+          const maxTpDistance = slDistance * RRR
           
-          // Konwertujemy ceny na koordynaty Y
+          // Ograniczamy TP do maksymalnej dozwolonej odległości
+          const tpPrice = mkPrice + Math.min(mkPrice - slPrice, maxTpDistance)
+          const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
+
+          // Konwertujemy OBLICZONE ceny na koordynaty Y
           const slY = candlestickSeries.priceToCoordinate(slPrice)!
-          const currentY = candlestickSeries.priceToCoordinate(currentPrice)!
-          const tpY = candlestickSeries.priceToCoordinate(currentPrice + (currentPrice - slPrice) * RRR)!
-          
-          // Rysujemy prostokąty używając przeliczonych koordynatów Y
-          ctx.fillStyle = 'rgba(144, 238, 144, 0.3)' // zielony dla TP
+          const epY = candlestickSeries.priceToCoordinate(epPrice)!
+          const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
+
+          // Rysujemy prostokąty używając obliczonych koordynatów Y
+          ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
           ctx.fillRect(
             startPoint.x,
-            currentY,
+            Math.min(slY, epY),  // używamy Math.min/max aby obsłużyć oba kierunki ruchu
             param.point.x - startPoint.x,
-            tpY - currentY
+            Math.abs(epY - slY)
           )
-          
-          ctx.fillStyle = 'rgba(255, 192, 203, 0.3)' // czerwony dla SL
+
+          ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
           ctx.fillRect(
             startPoint.x,
-            slY,
+            Math.min(epY, tpY),
             param.point.x - startPoint.x,
-            currentY - slY
+            Math.abs(tpY - epY)
           )
+
+          set({ tpPrice, epPrice })
         }
       }
     })
@@ -121,6 +132,33 @@ export const useChartStore = create<ChartState>((set, get) => ({
     }
   },
 
+  drawRectangles: (ctx: CanvasRenderingContext2D, startX: number, endX: number) => {
+    const { slPrice, tpPrice, epPrice, candlestickSeries } = get()
+    if (!candlestickSeries || !slPrice || !tpPrice || !epPrice) return
+
+    const slY = candlestickSeries.priceToCoordinate(slPrice)!
+    const epY = candlestickSeries.priceToCoordinate(epPrice)!
+    const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
+
+    // Rysujemy prostokąt SL -> EP
+    ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
+    ctx.fillRect(
+      startX,
+      slY,
+      endX - startX,
+      epY - slY
+    )
+
+    // Rysujemy prostokąt EP -> TP
+    ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
+    ctx.fillRect(
+      startX,
+      epY,
+      endX - startX,
+      tpY - epY
+    )
+  },
+
   handleChartClick: (x: number, y: number) => {
     const { isDrawing, candlestickSeries, chart } = get()
     
@@ -139,27 +177,18 @@ export const useChartStore = create<ChartState>((set, get) => ({
         startPoint: { x, y }
       })
     } else {
-      const epPrice = candlestickSeries.coordinateToPrice(invertedY)
-      const priceDiff = epPrice - get().slPrice!
-      const tpPrice = epPrice + (priceDiff * RRR)
+      const tpPrice = candlestickSeries.coordinateToPrice(invertedY)
+      // Obliczamy EP jako punkt środkowy między SL i TP
+      const epPrice = get().slPrice! + (tpPrice - get().slPrice!) / (RRR + 1)
       
-      console.log('EP point: ', { price: epPrice })
       console.log('TP point: ', { price: tpPrice })
-      
-      // Konwertujemy ceny z powrotem na koordynaty do rysowania
-      const slY = candlestickSeries.priceToCoordinate(get().slPrice!)!
-      const epY = candlestickSeries.priceToCoordinate(epPrice)!
-      const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
+      console.log('EP point: ', { price: epPrice })
       
       set({ 
         isDrawing: false,
         epPrice,
         tpPrice,
-        endPoint: { x, y },
-        rectangleCoords: {
-          start: { x: get().startPoint!.x, y: chartHeight - slY },
-          end: { x, y: chartHeight - epY }
-        }
+        endPoint: { x, y }
       })
     }
   },
