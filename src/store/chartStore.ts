@@ -70,18 +70,21 @@ export const useChartStore = create<ChartState>((set, get) => ({
           const y = param.point.y
           
           const width = x - startPoint.x
-          const height = y - startPoint.y
+          const height = startPoint.y - y
           
-          // Rysowanie pierwszego prostokąta (różowy - SL do EP)
           ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
-          ctx.fillRect(startPoint.x, startPoint.y, width, height)
+          ctx.fillRect(
+            startPoint.x, 
+            startPoint.y,
+            width, 
+            height
+          )
           
-          // Rysowanie drugiego prostokąta (jasnozielony - EP do TP)
           ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
           ctx.fillRect(
-            x - width,
+            x,
             y,
-            width,
+            -width,
             height * RRR
           )
         }
