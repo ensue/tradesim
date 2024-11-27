@@ -55,6 +55,20 @@ export const useChartStore = create<ChartState>((set, get) => ({
           labelVisible: false,
         },
       },
+      rightPriceScale: {
+        visible: false,
+      },
+      timeScale: {
+        visible: false,
+      },
+      grid: {
+        vertLines: {
+          visible: false,
+        },
+        horzLines: {
+          visible: false,
+        },
+      },
     })
     
     const candlestickSeries = chart.addCandlestickSeries({
