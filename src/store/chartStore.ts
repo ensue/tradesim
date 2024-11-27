@@ -19,6 +19,10 @@ interface ChartState {
   epPrice: number | null
   tpPrice: number | null
   drawRectangles: (ctx: CanvasRenderingContext2D, startX: number, endX: number) => void
+  startTime: number | null
+  endTime: number | null
+  slTimestamp: number | null
+  tpTimestamp: number | null
 }
 
 export const useChartStore = create<ChartState>((set, get) => ({
@@ -31,6 +35,10 @@ export const useChartStore = create<ChartState>((set, get) => ({
   slPrice: null,
   epPrice: null,
   tpPrice: null,
+  startTime: null,
+  endTime: null,
+  slTimestamp: null,
+  tpTimestamp: null,
 
   initChart: (container: HTMLElement) => {
     const chart = createChart(container, {
@@ -130,28 +138,32 @@ export const useChartStore = create<ChartState>((set, get) => ({
   },
 
   drawRectangles: (ctx: CanvasRenderingContext2D, startX: number, endX: number) => {
-    const { slPrice, tpPrice, epPrice, candlestickSeries } = get()
-    if (!candlestickSeries || !slPrice || !tpPrice || !epPrice) return
+    const { slPrice, tpPrice, epPrice, candlestickSeries, chart, slTimestamp, tpTimestamp } = get()
+    if (!candlestickSeries || !chart || !slPrice || !tpPrice || !epPrice || !slTimestamp || !tpTimestamp) return
 
     const slY = candlestickSeries.priceToCoordinate(slPrice)!
     const epY = candlestickSeries.priceToCoordinate(epPrice)!
     const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
 
+    // Konwertujemy timestampy na koordynaty X
+    const slX = chart.timeScale().timeToCoordinate(slTimestamp)!
+    const tpX = chart.timeScale().timeToCoordinate(tpTimestamp)!
+
     // Rysujemy prostokąt SL -> EP
     ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
     ctx.fillRect(
-      startX,
+      slX,
       slY,
-      endX - startX,
+      tpX - slX,
       epY - slY
     )
 
     // Rysujemy prostokąt EP -> TP
     ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
     ctx.fillRect(
-      startX,
+      slX,
       epY,
-      endX - startX,
+      tpX - slX,
       tpY - epY
     )
   },
@@ -167,25 +179,37 @@ export const useChartStore = create<ChartState>((set, get) => ({
     
     if (!isDrawing) {
       const slPrice = candlestickSeries.coordinateToPrice(invertedY)
-      console.log('SL point: ', { price: slPrice })
+      const timestamp = chart.timeScale().coordinateToTime(x)
+      if (timestamp === null) {
+        console.warn('Click outside of chart time range')
+        return
+      }
+      
+      console.log('SL point: ', { price: slPrice, time: timestamp })
       set({ 
         isDrawing: true, 
         slPrice,
-        startPoint: { x, y }
+        startPoint: { x, y },
+        slTimestamp: timestamp
       })
     } else {
       const tpPrice = candlestickSeries.coordinateToPrice(invertedY)
-      // Obliczamy EP jako punkt środkowy między SL i TP
+      const timestamp = chart.timeScale().coordinateToTime(x)
+      if (timestamp === null) {
+        console.warn('Click outside of chart time range')
+        return
+      }
       const epPrice = get().slPrice! + (tpPrice - get().slPrice!) / (RRR + 1)
       
-      console.log('TP point: ', { price: tpPrice })
+      console.log('TP point: ', { price: tpPrice, time: timestamp })
       console.log('EP point: ', { price: epPrice })
       
       set({ 
         isDrawing: false,
         epPrice,
         tpPrice,
-        endPoint: { x, y }
+        endPoint: { x, y },
+        tpTimestamp: timestamp
       })
     }
   },
