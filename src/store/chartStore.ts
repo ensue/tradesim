@@ -75,57 +75,78 @@ export const useChartStore = create<ChartState>((set, get) => ({
     overlayCanvas.height = container.clientHeight
     container.appendChild(overlayCanvas)
 
-    chart.subscribeCrosshairMove((param) => {
-      const { isDrawing, startPoint, candlestickSeries, hasActiveRectangles } = get()
+    // Funkcja pomocnicza do przerysowywania
+    const redrawOverlay = (param?: any) => {
+      const ctx = overlayCanvas.getContext('2d')
+      if (!ctx) return
       
-      if (overlayCanvas instanceof HTMLCanvasElement && candlestickSeries) {
-        const ctx = overlayCanvas.getContext('2d')
-        if (ctx) {
-          // Clear canvas before any drawing
-          ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
-          
-          // Draw saved rectangles if they exist
-          if (hasActiveRectangles) {
-            get().drawRectangles(ctx, 0, 0)  // coordinates don't matter anymore
-          }
-
-          // Draw preview rectangles while drawing
-          if (isDrawing && startPoint && param.point) {
-            const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
-            if (!currentPrice) return
-
-            const slPrice = get().slPrice!
-            const tpPrice = currentPrice
-            const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
-
-            // Konwertujemy ceny na koordynaty Y
-            const slY = candlestickSeries.priceToCoordinate(slPrice)!
-            const epY = candlestickSeries.priceToCoordinate(epPrice)!
-            const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
-
-            // Rysujemy prostokąt SL -> EP (czerwony)
-            ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
-            ctx.fillRect(
-              startPoint.x,
-              slY,
-              param.point.x - startPoint.x,
-              epY - slY
-            )
-
-            // Rysujemy prostokąt EP -> TP (zielony)
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
-            ctx.fillRect(
-              startPoint.x,
-              epY,
-              param.point.x - startPoint.x,
-              tpY - epY
-            )
-
-            set({ tpPrice, epPrice })
-          }
-        }
+      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
+      
+      // Najpierw rysuj zapisane prostokąty
+      if (get().hasActiveRectangles) {
+        get().drawRectangles(ctx, 0, 0)
       }
+      
+      // Następnie rysuj preview jeśli jest aktywny
+      const { isDrawing, startPoint, candlestickSeries } = get()
+      if (isDrawing && startPoint && param?.point && candlestickSeries) {
+        const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
+        if (!currentPrice) return
+
+        const slPrice = get().slPrice!
+        const tpPrice = currentPrice
+        const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
+
+        // Konwertujemy ceny na koordynaty Y
+        const slY = candlestickSeries.priceToCoordinate(slPrice)!
+        const epY = candlestickSeries.priceToCoordinate(epPrice)!
+        const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
+
+        // Rysujemy prostokąt SL -> EP (czerwony)
+        ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
+        ctx.fillRect(
+          startPoint.x,
+          slY,
+          param.point.x - startPoint.x,
+          epY - slY
+        )
+
+        // Rysujemy prostokąt EP -> TP (zielony)
+        ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
+        ctx.fillRect(
+          startPoint.x,
+          epY,
+          param.point.x - startPoint.x,
+          tpY - epY
+        )
+
+        set({ tpPrice, epPrice })
+      }
+    }
+
+    // Subskrypcje na zmiany skali czasu
+    chart.timeScale().subscribeVisibleLogicalRangeChange(redrawOverlay)
+    chart.timeScale().subscribeVisibleTimeRangeChange(redrawOverlay)
+
+    // Subskrypcja na zmiany wykresu
+    chart.subscribeCrosshairMove((param) => {
+      redrawOverlay(param)
     })
+
+    // Subskrypcja na ogólne zmiany wykresu
+    chart.subscribeClick(redrawOverlay)
+    
+    // Listener na zmianę rozmiaru
+    const resizeObserver = new ResizeObserver(() => {
+      overlayCanvas.width = container.clientWidth
+      overlayCanvas.height = container.clientHeight
+      chart.applyOptions({
+        width: container.clientWidth,
+        height: container.clientHeight
+      })
+      redrawOverlay()
+    })
+    resizeObserver.observe(container)
 
     set({ chart, candlestickSeries })
     return chart
