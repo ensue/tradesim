@@ -23,6 +23,7 @@ interface ChartState {
   endTime: number | null
   slTimestamp: number | null
   tpTimestamp: number | null
+  hasActiveRectangles: boolean
 }
 
 export const useChartStore = create<ChartState>((set, get) => ({
@@ -39,6 +40,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
   endTime: null,
   slTimestamp: null,
   tpTimestamp: null,
+  hasActiveRectangles: false,
 
   initChart: (container: HTMLElement) => {
     const chart = createChart(container, {
@@ -74,44 +76,53 @@ export const useChartStore = create<ChartState>((set, get) => ({
     container.appendChild(overlayCanvas)
 
     chart.subscribeCrosshairMove((param) => {
-      const { isDrawing, startPoint, candlestickSeries } = get()
+      const { isDrawing, startPoint, candlestickSeries, hasActiveRectangles } = get()
       
       if (overlayCanvas instanceof HTMLCanvasElement && candlestickSeries) {
         const ctx = overlayCanvas.getContext('2d')
-        if (ctx && isDrawing && startPoint && param.point) {
+        if (ctx) {
+          // Clear canvas before any drawing
           ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
           
-          const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
-          if (!currentPrice) return
+          // Draw saved rectangles if they exist
+          if (hasActiveRectangles) {
+            get().drawRectangles(ctx, 0, 0)  // coordinates don't matter anymore
+          }
 
-          const slPrice = get().slPrice!
-          const tpPrice = currentPrice
-          const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
+          // Draw preview rectangles while drawing
+          if (isDrawing && startPoint && param.point) {
+            const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
+            if (!currentPrice) return
 
-          // Konwertujemy ceny na koordynaty Y
-          const slY = candlestickSeries.priceToCoordinate(slPrice)!
-          const epY = candlestickSeries.priceToCoordinate(epPrice)!
-          const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
+            const slPrice = get().slPrice!
+            const tpPrice = currentPrice
+            const epPrice = slPrice + (tpPrice - slPrice) / (RRR + 1)
 
-          // Rysujemy prostokąt SL -> EP (czerwony)
-          ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
-          ctx.fillRect(
-            startPoint.x,
-            slY,
-            param.point.x - startPoint.x,
-            epY - slY
-          )
+            // Konwertujemy ceny na koordynaty Y
+            const slY = candlestickSeries.priceToCoordinate(slPrice)!
+            const epY = candlestickSeries.priceToCoordinate(epPrice)!
+            const tpY = candlestickSeries.priceToCoordinate(tpPrice)!
 
-          // Rysujemy prostokąt EP -> TP (zielony)
-          ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
-          ctx.fillRect(
-            startPoint.x,
-            epY,
-            param.point.x - startPoint.x,
-            tpY - epY
-          )
+            // Rysujemy prostokąt SL -> EP (czerwony)
+            ctx.fillStyle = 'rgba(255, 192, 203, 0.3)'
+            ctx.fillRect(
+              startPoint.x,
+              slY,
+              param.point.x - startPoint.x,
+              epY - slY
+            )
 
-          set({ tpPrice, epPrice })
+            // Rysujemy prostokąt EP -> TP (zielony)
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)'
+            ctx.fillRect(
+              startPoint.x,
+              epY,
+              param.point.x - startPoint.x,
+              tpY - epY
+            )
+
+            set({ tpPrice, epPrice })
+          }
         }
       }
     })
@@ -169,10 +180,13 @@ export const useChartStore = create<ChartState>((set, get) => ({
   },
 
   handleChartClick: (x: number, y: number) => {
-    const { isDrawing, candlestickSeries, chart } = get()
+    const { isDrawing, candlestickSeries, chart, hasActiveRectangles } = get()
     
     if (!chart || !candlestickSeries) return
     
+    // Don't start new drawing if we have active rectangles
+    if (hasActiveRectangles) return
+
     const container = chart.chartElement()
     const chartHeight = container?.clientHeight ?? 0
     const invertedY = chartHeight - y
@@ -209,7 +223,8 @@ export const useChartStore = create<ChartState>((set, get) => ({
         epPrice,
         tpPrice,
         endPoint: { x, y },
-        tpTimestamp: timestamp
+        tpTimestamp: timestamp,
+        hasActiveRectangles: true  // Set to true when drawing is complete
       })
     }
   },
