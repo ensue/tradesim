@@ -47,7 +47,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
       width: container.clientWidth,
       height: container.clientHeight,
       crosshair: {
-        mode: 0,
+        mode: 1,
         vertLine: {
           labelVisible: false,
         },
@@ -62,11 +62,11 @@ export const useChartStore = create<ChartState>((set, get) => ({
       },
       timeScale: {
         visible: false,
-        rightOffset: 0,
-        barSpacing: 6,
-        minBarSpacing: 2,
+        rightOffset: 100,
+        barSpacing: 5,
+        minBarSpacing: 1,
         fixLeftEdge: true,
-        fixRightEdge: true,
+        fixRightEdge: false,
       },
       grid: {
         vertLines: {

@@ -53,10 +53,10 @@ export async function fetchRandomCryptoHistory(): Promise<CandlestickData[]> {
       '4h': 14400000,
       '1d': 86400000
     }
-    const startTime = now - (300 * intervalInMs[randomInterval])
+    const startTime = now - (3000 * intervalInMs[randomInterval])
 
     const klines = await fetch(
-      `${baseUrl}/klines?symbol=${randomPair}&interval=${randomInterval}&startTime=${startTime}&limit=300`
+      `${baseUrl}/klines?symbol=${randomPair}&interval=${randomInterval}&startTime=${startTime}&limit=1000`
     )
     const klinesData: any[][] = await klines.json()
 
