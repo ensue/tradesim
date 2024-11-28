@@ -57,9 +57,16 @@ export const useChartStore = create<ChartState>((set, get) => ({
       },
       rightPriceScale: {
         visible: false,
+        autoScale: true,
+        entireTextOnly: true,
       },
       timeScale: {
         visible: false,
+        rightOffset: 0,
+        barSpacing: 6,
+        minBarSpacing: 2,
+        fixLeftEdge: true,
+        fixRightEdge: true,
       },
       grid: {
         vertLines: {
