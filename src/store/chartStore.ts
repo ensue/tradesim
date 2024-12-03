@@ -231,42 +231,60 @@ export const useChartStore = create<ChartState>((set, get) => ({
 
     const container = chart.chartElement()
     const chartHeight = container?.clientHeight ?? 0
-    const invertedY = chartHeight - y
+    const timeScale = chart.timeScale()
     
+    // Oblicz cenę tak jak wcześniej
+    const midY = chartHeight / 2
+    const midPrice = candlestickSeries.coordinateToPrice(midY)
+    if (midPrice === null) return
+    
+    const deltaY = midY - y
+    const testY = midY - 100
+    const testPrice = candlestickSeries.coordinateToPrice(testY)
+    if (testPrice === null) return
+    
+    const pixelsPerPrice = 100 / (testPrice - midPrice)
+    const price = midPrice + (deltaY / pixelsPerPrice)
+
+    // Ekstrapolacja czasu
+    const visibleRange = timeScale.getVisibleRange()
+    if (!visibleRange) return
+
+    // Pobierz widoczny zakres pikseli
+    const logicalRange = timeScale.getVisibleLogicalRange()
+    if (!logicalRange) return
+    
+    const firstPixel = timeScale.logicalToCoordinate(logicalRange.from)
+    const lastPixel = timeScale.logicalToCoordinate(logicalRange.to)
+    const pixelRange = lastPixel - firstPixel
+    
+    // Oblicz czas na podstawie proporcji pikseli
+    const timeRange = visibleRange.to - visibleRange.from
+    const timePerPixel = timeRange / pixelRange
+    const deltaX = x - firstPixel
+    const timestamp = visibleRange.from + (deltaX * timePerPixel)
+
     if (!isDrawing) {
-      const slPrice = candlestickSeries.coordinateToPrice(invertedY)
-      const timestamp = chart.timeScale().coordinateToTime(x)
-      if (timestamp === null) {
-        console.warn('Click outside of chart time range')
-        return
-      }
-      
-      console.log('SL point: ', { price: slPrice, time: timestamp })
+      console.log('SL point: ', { price, time: timestamp })
       set({ 
         isDrawing: true, 
-        slPrice,
+        slPrice: price,
         startPoint: { x, y },
         slTimestamp: timestamp
       })
     } else {
-      const tpPrice = candlestickSeries.coordinateToPrice(invertedY)
-      const timestamp = chart.timeScale().coordinateToTime(x)
-      if (timestamp === null) {
-        console.warn('Click outside of chart time range')
-        return
-      }
-      const epPrice = get().slPrice! + (tpPrice - get().slPrice!) / (RRR + 1)
+      const epPrice = get().slPrice! + (price - get().slPrice!) / (RRR + 1)
       
-      console.log('TP point: ', { price: tpPrice, time: timestamp })
+      console.log('TP point: ', { price, time: timestamp })
       console.log('EP point: ', { price: epPrice })
       
       set({ 
         isDrawing: false,
         epPrice,
-        tpPrice,
+        tpPrice: price,
         endPoint: { x, y },
         tpTimestamp: timestamp,
-        hasActiveRectangles: true  // Set to true when drawing is complete
+        hasActiveRectangles: true
       })
     }
   },
