@@ -101,14 +101,16 @@ export const useChartStore = create<ChartState>((set, get) => ({
       const ctx = overlayCanvas.getContext('2d')
       if (!ctx) return
       
+      // Clear the canvas
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
       
-      // Najpierw rysuj zapisane prostokąty
+      // Draw saved rectangles if they exist
       if (get().hasActiveRectangles) {
+        const { slPrice, tpPrice, epPrice } = get()
         get().drawRectangles(ctx, 0, 0)
       }
       
-      // Następnie rysuj preview jeśli jest aktywny
+      // Draw preview if drawing is in progress
       const { isDrawing, startPoint, candlestickSeries } = get()
       if (isDrawing && startPoint && param?.point && candlestickSeries) {
         const currentPrice = candlestickSeries.coordinateToPrice(param.point.y)
@@ -145,18 +147,14 @@ export const useChartStore = create<ChartState>((set, get) => ({
       }
     }
 
-    // Subskrypcje na zmiany skali czasu
+    // Poprawione subskrypcje zdarzeń
     chart.timeScale().subscribeVisibleLogicalRangeChange(redrawOverlay)
     chart.timeScale().subscribeVisibleTimeRangeChange(redrawOverlay)
-
-    // Subskrypcja na zmiany wykresu
     chart.subscribeCrosshairMove((param) => {
       redrawOverlay(param)
     })
-
-    // Subskrypcja na ogólne zmiany wykresu
     chart.subscribeClick(redrawOverlay)
-    
+
     // Listener na zmianę rozmiaru
     const resizeObserver = new ResizeObserver(() => {
       overlayCanvas.width = container.clientWidth
@@ -226,7 +224,7 @@ export const useChartStore = create<ChartState>((set, get) => ({
     
     if (!chart || !candlestickSeries) return
     
-    // Don't start new drawing if we have active rectangles
+    // Ensure we don't start new drawing if we have active rectangles
     if (hasActiveRectangles) return
 
     const container = chart.chartElement()
