@@ -49,19 +49,19 @@ export const useChartStore = create<ChartState>((set, get) => ({
       crosshair: {
         mode: 1,
         vertLine: {
-          labelVisible: false,
+          labelVisible: true,
         },
         horzLine: {
-          labelVisible: false,
+          labelVisible: true,
         },
       },
       rightPriceScale: {
-        visible: false,
+        visible: true,
         autoScale: true,
         entireTextOnly: true,
       },
       timeScale: {
-        visible: false,
+        visible: true,
         rightOffset: 100,
         barSpacing: 5,
         minBarSpacing: 1,
@@ -70,10 +70,10 @@ export const useChartStore = create<ChartState>((set, get) => ({
       },
       grid: {
         vertLines: {
-          visible: false,
+          visible: true,
         },
         horzLines: {
-          visible: false,
+          visible: true,
         },
       },
     })
